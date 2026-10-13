@@ -6,6 +6,7 @@
   Part C: Live Total & Style Changes
   Part D: Custom Item Form
   Part E: Clear Cart
+  Bonus: Quantity controls (+ and -)
 */
 
 const menu = [
@@ -22,7 +23,7 @@ let cart = [];
 // PART A - RENDER MENU
 // ======================
 
-// Create and display all menu items with Add buttons.
+// Create and display menu items with Add buttons.
 function renderMenu() {
     const menuList = document.getElementById("menu-list");
 
@@ -45,17 +46,16 @@ function renderMenu() {
 
         li.appendChild(itemText);
         li.appendChild(addButton);
-
         menuList.appendChild(li);
     });
 }
 
 
 // ======================
-// PART B - SHOPPING CART
+// PART B + BONUS - CART
 // ======================
 
-// Display all cart entries and their Remove buttons.
+// Display grouped cart items with quantities.
 function renderCart() {
     const cartList = document.getElementById("cart-list");
     const cartCount = document.getElementById("cart-count");
@@ -67,19 +67,46 @@ function renderCart() {
         emptyMessage.textContent = "Your cart is empty.";
         cartList.appendChild(emptyMessage);
     } else {
-        cart.forEach((item, index) => {
+        const groupedItems = [];
+
+        cart.forEach(item => {
+            const existing = groupedItems.find(
+                entry => entry.name === item.name
+            );
+
+            if (existing) {
+                existing.quantity++;
+            } else {
+                groupedItems.push({
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1
+                });
+            }
+        });
+
+        groupedItems.forEach(item => {
             const li = document.createElement("li");
 
             const itemText = document.createElement("span");
             itemText.textContent =
-                item.name + " — $" + item.price.toFixed(2);
+                item.name + " ×" + item.quantity +
+                " — $" + (item.price * item.quantity).toFixed(2);
 
-            const removeButton = document.createElement("button");
-            removeButton.textContent = "Remove";
-            removeButton.dataset.index = index;
+            const plusButton = document.createElement("button");
+            plusButton.textContent = "+";
+            plusButton.dataset.action = "plus";
+            plusButton.dataset.name = item.name;
+
+            const minusButton = document.createElement("button");
+            minusButton.textContent = "−";
+            minusButton.dataset.action = "minus";
+            minusButton.dataset.name = item.name;
 
             li.appendChild(itemText);
-            li.appendChild(removeButton);
+            li.appendChild(plusButton);
+            li.appendChild(minusButton);
+
             cartList.appendChild(li);
         });
     }
@@ -89,14 +116,34 @@ function renderCart() {
 }
 
 
-// Remove one cart entry using event delegation.
+// Handle + and - buttons using event delegation.
 document.getElementById("cart-list").addEventListener("click", (event) => {
-    if (event.target.matches("button[data-index]")) {
-        const index = Number(event.target.dataset.index);
+    const button = event.target.closest("button[data-action]");
 
-        cart.splice(index, 1);
-        renderCart();
+    if (!button) {
+        return;
     }
+
+    const name = button.dataset.name;
+    const action = button.dataset.action;
+
+    if (action === "plus") {
+        const item = menu.find(entry => entry.name === name);
+
+        if (item) {
+            cart.push(item);
+        }
+    }
+
+    if (action === "minus") {
+        const index = cart.findIndex(item => item.name === name);
+
+        if (index !== -1) {
+            cart.splice(index, 1);
+        }
+    }
+
+    renderCart();
 });
 
 
@@ -104,12 +151,15 @@ document.getElementById("cart-list").addEventListener("click", (event) => {
 // PART C - LIVE TOTAL
 // ======================
 
-// Calculate cart total and update reward styling.
+// Calculate total and update reward styling.
 function updateTotal() {
     const cartTotal = document.getElementById("cart-total");
     const rewardMsg = document.getElementById("reward-msg");
 
-    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    const total = cart.reduce(
+        (sum, item) => sum + item.price,
+        0
+    );
 
     cartTotal.textContent = total.toFixed(2);
 
@@ -127,7 +177,7 @@ function updateTotal() {
 // PART D - CUSTOM ITEM
 // ======================
 
-// Validate and add a custom item to the menu.
+// Validate and add custom menu items.
 function addCustomItem() {
     const nameInput = document.getElementById("item-name");
     const priceInput = document.getElementById("item-price");
@@ -160,7 +210,6 @@ function addCustomItem() {
     }
 
     menu.push({ name, price });
-
     renderMenu();
 
     nameInput.value = "";
@@ -169,7 +218,7 @@ function addCustomItem() {
 }
 
 
-// Handle the Add to menu button.
+// Handle custom item submission.
 document.getElementById("add-custom-btn").addEventListener(
     "click",
     addCustomItem
@@ -185,7 +234,6 @@ function clearCart() {
     cart = [];
     renderCart();
 }
-
 
 // Handle the Clear cart button.
 document.getElementById("clear-cart-btn").addEventListener(
